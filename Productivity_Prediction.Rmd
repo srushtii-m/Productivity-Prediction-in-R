@@ -1,0 +1,563 @@
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+d <- read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/00597/garments_worker_productivity.csv", header = TRUE, as.is = TRUE)
+```
+
+# 1. Data Preparation 
+
+a. Remove the column ‘wip’ from the dataset.
+```{r}
+df = data.frame(d)
+df = subset (df, select = -wip)
+head(df)
+```
+
+b. Create another variable names ‘log_productivity’ which is defined as log_prodductivity = log(actual_prouctivity * 100). Store any new variable as an additional column in the original data-frame.
+
+```{r}
+df$log_productivity = log(df$actual_productivity)*100
+head(df)
+```
+
+c. Create another variable called ‘log_no_of_workers’ which is the natural logarithm of the no_of_workers.
+
+```{r}
+df$log_no_of_workers = log(df$no_of_workers)
+head(df)
+```
+
+d. Convert the following variables to factor variables team, quarter, department, and day.
+
+```{r}
+variables = c('team','quarter','department','day')
+df[,variables] = lapply(df[,variables],factor)
+str(df)
+head(df)
+```
+
+e. Create another variable called ‘percentage_achivement’ which is defined as follows: percentage_achievment = (actual_productivity – targeted_productivity) / targeted_productivity X 100.
+
+```{r}
+df$percentage_achievement = ((df$actual_productivity - df$targeted_productivity) / df$targeted_productivity) * 100
+head(df)
+```
+
+f. Also for cleaning the variable department, please run the following command (there are some coding errors in the variable department).
+
+```{r}
+levels(df$department)<-c("finishing", "finishing", "sewing")
+```
+
+# 2. Exploratory Analysis
+
+a. Create the histograms of actual_productivity and log_productivity. How does the distribution of log_productivity change with respect to actual_productivity? Do the same for number of workers.
+
+```{r}
+# Histogram of actual_productivity 
+hist(df$actual_productivity, xlab="Actual Productivity", main="Histogram of actual_productivity", xlim = c(0,1.4), ylim = c(0,400))
+hist(df$log_productivity, xlab="Log Productivity", main="Histogram of log_productivity", xlim = c(-200,50), ylim = c(0,400))
+```
+The distribution of log_productivity is more left skewed than actual_productivity. Since it is left skewed, the mean is lesser than the median. The actual_productivity is approximately normally distributed and it ranges from 0.2 to 1.2 and has median around 0.8.
+
+```{r}
+# Histogram of no_of_workers
+hist(df$no_of_workers, xlab="No. of workers", main="Histogram of no_of_workers", xlim=c(0,70), ylim = c(0,600))
+hist(df$log_no_of_workers, xlab="Log no. of workers", main="Histogram of log_no_of_workers", xlim=c(0,5))
+```
+The distribution of log_no_of_workers is approximately left skewed than no_of_workers but there is a rise in log_no_of_workers between 2-2.5. The no_of_workers range from 0-60 and most of the teams have 50-60 workers. This distribution is not so uniform or central.
+
+
+b. Each month is divided into five quarters, where approximately each week is a quarter. How does the distribution of logarithm of productivity change in each quarter? Create a box plot of logarithm of productivity by quarter. Comment on your observations. Does the worker productivity increase towards the end of the month (quarter 5) as compared to other quarters? Perform a t-test for quarter 5 with respect to (individually) all other quarters. (Hint. There will be 4 different t-tests). What do you observe for each t-test? Comment on the findings. Use a 95% confidence. (You need to state the hypotheses explicitly in your answer, the mean and standard deviations for each of the groups in a t-tests, the t-statistics and the p-values. Then you need to explain what the p-value means.).
+
+```{r}
+#box plot of logarithm of productivity by quarter
+boxplot(log_productivity~quarter, varwidth=TRUE, data = df)
+```
+1. The distribution of log_productivity is approximately normal in quarter 3 and quarter 3 compared to the other quarters.
+2. It is most negatively skewed in quarter 4 compared to quarter 5 and quarter 2.
+3. Quarter 2 has the minimum log_productivity compared to all the other quarters and quarter 3 has the maximum.
+4. From the median of the box plot we can observe that the productivity decreases till quarter 3 and then starts rising while nearing to quarter 5.
+5. Quarter 5 has the highest median of log_productivity and the outliers are also reduced, signifying that the workers are more productive toward the end of the month.
+Yes, the worker productivity increase towards the end of the month.
+
+t-test of Quarter5 with respect to other quarters:
+
+Hypothesis statement: 
+Null hypothesis: Productivity of quarter 5 i.e., log_productivity of quarter 5 is equal to log_productivity of quarter x(where x=1,2,3,4)
+Alternative Hypothesis: Productivity of quarter 5 i.e., log_productivity of quarter 5 is not equal to log_productivity of quarter x(where x=1,2,3,4)
+$$
+H_0: p_5 = p_x\\
+H_a: p_5 \ne p_x 
+$$
+1. t-test of log_productivity of workers in quarter 5 wrt quarter 1
+```{r, echo=TRUE}
+t1 = df[df$quarter %in% c('Quarter5','Quarter1'),]
+t.test(log_productivity ~ quarter, data = t1)
+```
+Observation:
+The t statistic is -2.056, with df 52.39. The mean of log_productivity of workers for Quarter 1 is -31.476 and for Quarter 5 is -22.35.
+The 95% C.I for the difference in the log_productivity between 2 quarters here is [-18.0285764, -0.2207791].
+Using a level of significance of $0.05$. The p-value of the test is $0.04478 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity of workers in quarter 5 is significantly higher than log_productivity of workers in quarter 1. 
+
+2. t-test of log_productivity of workers in quarter 5 wrt quarter 2
+```{r, echo=TRUE}
+t2 = df[df$quarter %in% c('Quarter5','Quarter2'),]
+t.test(log_productivity ~ quarter, data = t2)
+```
+Observation:
+The t statistic is -2.387, with df 55.37. The mean of log_productivity of workers for Quarter 2 is -33.076 and for Quarter 5 is -22.35.
+The 95% C.I for the difference in the log_productivity between 2 quarters here is [-19.74338, -1.70569].
+Using a level of significance of $0.05$. The p-value of the test is $0.02064 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity of workers in quarter 5 is significantly higher than log_productivity of workers in quarter 2.
+
+3. t-test of log_productivity of workers in quarter 5 wrt quarter 3
+```{r, echo=TRUE}
+t3 = df[df$quarter %in% c('Quarter5','Quarter3'),]
+t.test(log_productivity ~ quarter, data = t3)
+```
+Observation:
+The t statistic is -3.519, with df 65.83. The mean of log_productivity of workers for Quarter 3 is -38.932 and for Quarter 5 is -22.35.
+The 95% C.I for the difference in the log_productivity between 2 quarters here is [-25.98828, -7.17350].
+Using a level of significance of $0.05$. The p-value of the test is $0.0007905 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity of workers in quarter 5 is significantly higher than log_productivity of workers in quarter 3.
+
+4. t-test of log_productivity of workers in quarter 5 wrt quarter 4
+```{r, echo=TRUE}
+t4 = df[df$quarter %in% c('Quarter5','Quarter4'),]
+t.test(log_productivity ~ quarter, data = t4)
+```
+Observation:
+The t statistic is -3.5008, with df 63.84. The mean of log_productivity of workers for Quarter 4 is -38.70 and for Quarter 5 is -22.35.
+The 95% C.I for the difference in the log_productivity between 2 quarters here is [-25.685499, -7.020621].
+Using a level of significance of $0.05$. The p-value of the test is $0.000851 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity of workers in quarter 5 is significantly higher than log_productivity of workers in quarter 4.
+
+c. Repeat part (b) for department instead of quarter, day instead of quarter, and no_of_style_change instead of quarter. In these cases, perform the t-test for all pairs of departments and all pairs of style changes. For day, compare Sunday with all other weekdays.
+
+log_productivity analysis by department
+```{r}
+#box plot of logarithm of productivity by department
+boxplot(log_productivity~department, varwidth=TRUE, data = df)
+```
+From boxplot, we can see that median of log_productivity of finishing department is slightly higher than sewing department.
+Finishing department is more left skewed and more spread out than sewing department.
+
+t-test for departments
+
+Hypothesis statement:
+Null hypothesis: log_productivity of finishing department is equal to log_productivity of sewing department.
+Alternative Hypothesis: log_productivity of finishing department is not equal to log_productivity of sewing department.
+$$
+H_0: p_f = p_s\\
+H_a: p_f \ne p_s 
+$$
+```{r, echo=TRUE}
+t.test(log_productivity ~ department, data = df)
+```
+Observation:
+The t statistic is 1.5098, with df 941.23. The mean of log_productivity of workers of finishing department is -32.86973 and for sewing department is -35.51120.
+The 95% C.I for the difference in the log_productivity between 2 departments here is [-0.7920583, 6.0749866].
+Using a level of significance of $0.05$. The p-value of the test is $0.1314 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+log_productivity analysis by day
+```{r}
+#box plot of logarithm of productivity by day
+boxplot(log_productivity~day, varwidth=TRUE, data = df)
+```
+From box plot we can observe that:
+The median of wednesday is the highest.
+The data for thursday is more spreadout than all.
+The log_productivity on Sunday is approximately normal.
+log_productivity on saturday is most left skewed.
+Maximum outliers are present on wednesday.
+The min(Q1) log_productivity is observed on Thursday and the max(Q5) is observed for Sunday
+
+t-test of Sunday with respect to other days:
+
+Hypothesis statement: 
+Null hypothesis: Productivity of Sunday i.e., log_productivity of Sunday is equal to log_productivity of workers on day x(where x=Monday, Tuesday, Wednesday, Thursday, Saturday)
+Alternative Hypothesis: Productivity of Sunday i.e., log_productivity of Sunday is not equal to log_productivity of workers on day x(where x=Monday, Tuesday, Wednesday, Thursday, Saturday)
+$$
+H_0: p_s = p_x\\
+H_a: p_s \ne p_x 
+$$
+1. t-test of log_productivity of workers Sunday wrt Monday
+```{r, echo=TRUE}
+d1 = df[df$day %in% c('Sunday','Monday'),]
+t.test(log_productivity ~ day, data = d1)
+```
+The t statistic is 0.25071, with df 398.5. The mean of log_productivity of workers on Monday is -34.65876 and for Sunday is -35.410.
+The 95% C.I for the difference in the log_productivity between 2 days here is [-5.141280, 6.644255].
+Using a level of significance of $0.05$. The p-value of the test is $0.8022 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+2. t-test of log_productivity of workers Sunday wrt Tuesday
+```{r, echo=TRUE}
+d2 = df[df$day %in% c('Sunday','Tuesday'),]
+t.test(log_productivity ~ day, data = d2)
+```
+The t statistic is -0.95673, with df 397.74. The mean of log_productivity of workers on Tuesday is -32.75736 and for Sunday is -35.410.
+The 95% C.I for the difference in the log_productivity between 2 days here is [-8.104195, 2.798409].
+Using a level of significance of $0.05$. The p-value of the test is $0.3393 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+3. t-test of log_productivity of workers Sunday wrt Wednesday
+```{r, echo=TRUE}
+d3 = df[df$day %in% c('Sunday','Wednesday'),]
+t.test(log_productivity ~ day, data = d3)
+```
+The t statistic is -0.030093, with df 408.99. The mean of log_productivity of workers on Wednesday is -35.32167 and for Sunday is -35.410.
+The 95% C.I for the difference in the log_productivity between 2 days here is [-5.874953, 5.697791].
+Using a level of significance of $0.05$. The p-value of the test is $0.976 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+4. t-test of log_productivity of workers Sunday wrt Thursday
+```{r, echo=TRUE}
+d4 = df[df$day %in% c('Sunday','Thursday'),]
+t.test(log_productivity ~ day, data = d4)
+```
+The t statistic is 0.20894, with df 399.88. The mean of log_productivity of workers on Thursday is  -36.01206 and for Sunday is -35.410.
+The 95% C.I for the difference in the log_productivity between 2 days here is [-5.060680, 6.264306].
+Using a level of significance of $0.05$. The p-value of the test is $0.8346 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+5. t-test of log_productivity of workers Sunday wrt Saturday
+```{r, echo=TRUE}
+d5 = df[df$day %in% c('Sunday','Saturday'),]
+t.test(log_productivity ~ day, data = d5)
+```
+
+The t statistic is 1.1549, with df 386.9. The mean of log_productivity of workers on Saturday is  -32.018 and for Sunday is -35.410.
+The 95% C.I for the difference in the log_productivity between 2 days here is [-2.382729, 9.166755].
+Using a level of significance of $0.05$. The p-value of the test is $0.2489 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the groups considered.
+
+log_productivity analysis by no_of_style_change
+```{r}
+#box plot of logarithm of productivity by no_of_style_change
+boxplot(log_productivity~no_of_style_change, varwidth=TRUE, data = df)
+```
+From boxplot, we can observe that:
+log_productivity is highest for 0 and lowest for 1.
+1. no_of_style_change 0 has the max(Q5) value, highest median and most outliers than other two.
+2. no_of_style_change 1 has the minimum log_productivity value and least median value.
+3. no_of_style_change 2 has the least spread out of data and outliers.
+4. All three are approximately left skewed.
+
+t-test of all pairs of no_of_style_change:
+
+Hypothesis statement: 
+Null hypothesis: log_productivity of pair of no_of_style_change are equal
+Alternative Hypothesis: log_productivity of pair of no_of_style_change are not equal
+
+$$
+H_0: p_0 = p_1\\
+H_a: p_0 \ne p_1 
+$$
+1. t-test of log_productivity of no_of_style_change 0 wrt 1
+```{r, echo=TRUE}
+n1 = df[df$no_of_style_change %in% c('0','1'),]
+t.test(log_productivity ~ no_of_style_change, data = n1)
+```
+Observation:
+The t statistic is 6.931, with df 135.33. The mean of log_productivity for no_of_style_change 0 is -32.12551 and for no_of_style_change 1 is -52.61405.
+The 95% C.I for the difference in the log_productivity between 2 styles here is [14.64295, 26.33414].
+Using a level of significance of $0.05$. The p-value of the test is $1.547e-10 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity no_of_style_change 0 is significantly different(higher) than log_productivity of no_of_style_change 1.
+
+2. 1. t-test of log_productivity of no_of_style_change 0 wrt 2
+```{r, echo=TRUE}
+n1 = df[df$no_of_style_change %in% c('0','2'),]
+t.test(log_productivity ~ no_of_style_change, data = n1)
+```
+
+Observation:
+The t statistic is 2.6885, with df 34.807. The mean of log_productivity for no_of_style_change 0 is -32.12551 and for no_of_style_change 2 is -43.65272 .
+The 95% C.I for the difference in the log_productivity between 2 styles here is [2.82116, 20.23328].
+Using a level of significance of $0.05$. The p-value of the test is $0.01094 < 0.05$. Therefore, we reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the log_productivity no_of_style_change 0 is significantly different(higher) than log_productivity of no_of_style_change 2.
+
+3. 1. t-test of log_productivity of no_of_style_change 1 wrt 2
+```{r, echo=TRUE}
+n1 = df[df$no_of_style_change %in% c('1','2'),]
+t.test(log_productivity ~ no_of_style_change, data = n1)
+```
+
+Observation:
+The t statistic is -1.7709, with df 63.82. The mean of log_productivity for no_of_style_change 2 is -43.65272 and for no_of_style_change 11 is -52.61405.
+The 95% C.I for the difference in the log_productivity between 2 styles here is [-19.070858, 1.148206].
+Using a level of significance of $0.05$. The p-value of the test is $0.08135 > 0.05$. Therefore, we cannot reject the null hypothesis $H_0$ with a significance of at least 0.05, or a confidence levels of $95%$. Therefore, we conclude that the evidence is not strong enough to suggest an effect exists in the population among the 2 groups considered.
+
+d. Perform a scatter plot of the natural logarithm of no_of_workers +1 on x–axis and natural logarithm of productivity on y-axis. What do you observe? Comment on any pattern that you may observe. Report the correlation coefficient between the two variables.
+
+```{r}
+plot(log(df$no_of_workers+1), df$log_productivity, xlab="log_no_of_workers+1", 
+     ylab="log_productivity", main = "log_no_of_workers+1 v/s log_productivity")
+```
+There is no evident linear relationship between the variables and it shows that they are not highly associated with each other. So, the increase in number of workers doesn't affect log_productivity much and has only slight low correlation i.e., slight decrease in productivity with increase in number of workers.
+```{r}
+#Correlation coefficient
+cor(log(df$no_of_workers+1),df$log_productivity)
+```
+The negative correlation coefficient implies that these 2 variables vary in opposite directions. They have very weak negative correlation as the value is closer to 0.
+
+e. Perform a scatter plot of the natural logarithm of incentive + 1 on x-axis and natural logarithm of productivity on y-axis. What do you observe? Comment on any patterns that you may observe. Report the correlation coefficient between the two variables.
+
+```{r}
+plot(log(df$incentive+1), df$log_productivity, xlab="logarithm of incentive+1", 
+     ylab="log_productivity", main = "logarithm of incentive+1 v/s log_productivity")
+```
+We can observe from the scatter plot that theres a linear relation between the variables, as incentive increases, productivity increases slightly.
+
+```{r}
+#Correlation coefficient
+cor(log(df$incentive+1),df$log_productivity)
+```
+The correlation coefficient is positive and weak as it is 0.214.
+
+f. Repeat (d) and (e) for percentage_achievement instead of logarithm of productivity.
+
+```{r}
+# log_no_of_workers+1
+plot(log(df$no_of_workers+1), df$percentage_achievement, xlab="log_no_of_workers+1", 
+     ylab="percentage_achievement", main = "log_no_of_workers+1 v/s percentage_achievement")
+```
+We can see from scatter plot that the variables do not have visible linear relationship. Percentage achievement doesnot increase with increase in no_of_workers.
+
+```{r}
+#Correlation coefficient
+cor(log(df$no_of_workers+1),df$percentage_achievement)
+```
+It has weak negative correlation of -0.0080. Percentage achievement slightly decreases with increase in no_of_workers.
+```{r}
+plot(log(df$incentive+1), df$log_productivity, xlab="logarithm of incentive+1", 
+     ylab="percentage_achievement", main = "logarithm of incentive+1 v/s log_productivity")
+```
+We can observe from the scatter plot that incentive and percentage achievement have linear relationship in positive direction. Percentage achievement increases for increase in incentive.
+
+```{r}
+#Correlation coefficient
+cor(log(df$incentive+1),df$percentage_achievement)
+```
+They have very weak positive correlation of 0.049.
+
+# 3. Regression Analysis
+
+a. Estimate an ordinary least square regression (OLS) with natural logarithm of productivity as response variable and natural logarithm of no_of_workers + 1 as the predictor variable. Comment on the relationship between the response and the predictor variable. Is team size (number of workers in a team) a good predictor of productivity? Does this finding conform to the exploratory analysis in 2(d)? What is the estimated regression equation? How much of the variance in the response is explained by the predictor? (Comment on the R-square, the intercept, slope, and the t-statistics of the intercept and slope, and the p-values). Finally, plot the regression equation on the scatterplot of the predictor and response.
+
+OLS Regression:
+```{r}
+m = lm(log_productivity~log(no_of_workers+1), data=df)
+summary(m)
+plot(log_productivity~log(no_of_workers+1), data=df)
+abline(m, col=2)
+```
+Relationship between the response and the predictor variable: The intercept estimate for trend line in model summary is negative and not so significant. The predictor variable is not a very important predictor of the response variable.
+
+Hypothesis:
+$$
+H_0: b_1=0\\
+H_a: b_1\ne 0.
+$$
+No. of workers in a team is not a good predictor of productivity. 
+
+From 2d also we can observe that they had very low negative correlation of almost 0 i.e., -0.0028. This conforms with that analysis that, there's no strong correlation between them.
+
+The estimated regression equation:
+$$
+E[productivity|no of workers]=b_0 + b_1 \times no of workers.
+$$
+$$
+E[productivity|no of workers]=-34.06606 -0.09996 \times no of workers.
+$$
+The variance explained by the predictor variable is 1.02.
+The R-square error is 8.182e-04%, this value is very close to zero and has not much ability to explain the variance in the response variable.
+The intercept is -34.06 and slope is -0.09996. The slope is almost zero and that is why the regression line is horizontal.
+The t-statistic is 28.95 and the p-value is 0.9212.
+The p-value is greater than 0.05 at 95% confidence interval, hence we cannot reject the null hypothesis and b1 is lesser than 0 and not statistically significant.
+
+b. Repeat (a) with logarithm of incentives + 1 as the predictor.
+```{r}
+m1 = lm(log_productivity~log(incentive+1), data=df)
+summary(m1)
+plot(log_productivity~log(incentive+1), data=df)
+abline(m1, col=2)
+```
+
+Relationship between the response and the predictor variable: The intercept estimate for trend line in model summary is negative and not so significant. The predictor variable is not a very important predictor of the response variable.
+
+Hypothesis:
+$$
+H_0: b_1=0\\
+H_a: b_1\ne 0.
+$$
+Incentive is better predictor of productivity compared to number of workers in a team. 
+
+From 2d also we can observe that they had very low positive correlation of almost 0 i.e., 0.2149898. This conforms with that analysis that, there's no strong correlation between them but low positive correlation - productivity increases in small amount with increase in incentive.
+
+The estimated regression equation:
+$$
+E[productivity|no of workers]= -40.4319 + 3.0749 \times no of workers.
+$$
+The variance explained by the predictor variable is 0.163.
+The R-square error is 0.04622, this value is close to zero and but can explain some low variance in the response variable.
+The intercept is -40.4319 and slope is 3.0749. The slope is slightly positive and we can observe the regression line moving in positive direction.
+The t-statistic is 28.27 and the p-value is 5.542e-14.
+The p-value is lesser than 0.05 at 95% confidence interval , hence we can reject the null hypothesis and accept that b1 is greater than 0 and statistically significant. 
+
+
+c. Estimate the regression equation for log of actual productivity as response and the following variables as predictors: log of no_of_workers + 1, log of incentive + 1, log of targeted productivity, no_of_style_change, quarter (factor variable), department (factor variable), day (factor variable) and team (factor variable). Show the regression summary. 
+
+```{r}
+#Regression equation and summary
+m2 = lm(log(actual_productivity) ~log(no_of_workers+1)+log(incentive+1)+log(targeted_productivity)+
+          no_of_style_change+as.factor(quarter)+as.factor(department)+
+          as.factor(day)+as.factor(team), data=df)
+summary(m2)
+```
+
+Answer the following question:
+i. Which of the following variables significantly affect worker productivity and which direction? State the level of significance.
+log(targeted_productivity) affects worker productivity significantly in positive direction with level of significance <2e-16 (<0.001 - 99.9% confidence interval) and as.factor(department)sewing also affects worker productivity at the same level of significance but in negative direction.
+
+ii. On the average how much does log of productivity change with one incremental style change.
+-0.029110 - log of productivity decreases by 0.029110 with one incremental style change
+
+iii. What is the change in log of productivity for quarter 2, 3, 4 and 5 with respect to quarter 1. Which of these changes are statistically significant?
+log productivity: 
+decreases by 0.006396 for quarter 2 wrt quarter 1, 
+decreases by 0.036148 for quarter 3 wrt quarter 1, 
+decreases by 0.050495 for quarter 4 wrt quarter 1,
+increases by 0.106628 for quarter 5 wrt quarter 1.
+Change in log_productivity for quarter 5 wrt quarter 1 is statistically significant (p-value is 0.008404, which is less than 0.05 for 95% Confidence interval)
+
+iv. How does the productivity of sewing department compare with the finishing department?
+The productivity of sewing department is 0.493515 times lesser wrt finishing department.
+
+v. Write down the regression equation for the following cases:
+1. Sewing department for a Sunday of quarter 4 for team 10.
+$$
+E[productivity]= -0.538819 + 0.178241\times log(noofworkers +1)+0.064733 \times log(incentive + 1) \\+0.493178 \times log(targetedproductivity)-0.029110 \times noofstylechange \\-0.493515 \times sewing+ 0.014940 \times Sunday-0.050495 \times Quarter4-0.121438\times team10
+$$
+2. Finishing department for a Wednesday of quarter 1 for team 4.
+$$
+E[productivity]= -0.538819 + 0.178241\times log(noofworkers +1)+0.064733 \\ \times log(incentive + 1) +0.493178 \times log(targetedproductivity)-0.029110 \times noofstylechange+ \\ 0.018706 \times Wednesday-0.037371\times team4
+$$
+3. Finishing department for a Monday of quarter 2 for team 8.
+$$
+E[productivity]= -0.538819 + 0.178241\times log(noofworkers +1)+0.064733 \times log(incentive + 1) \\+0.493178 \times log(targeted_productivity)-0.029110 \times noofstylechange+ \\ -0.037371\times team8-0.006396 \times Quarter2 
+$$
+vi. Plot the actual log of productivity values versus the predicted log of productivity values. Do you think the model is a good fit? How much variance of the response is explained by the model?
+```{r}
+pred = predict(m2, newdata = df)
+plot(log(df$actual_productivity), pred, xlab="actual log of productivity",
+     ylab="predicted log of productivity",
+     main = "Observed versus Predicted Values")
+```
+The model is not a perfect fit and there seems to be error. This might be because of not considering other variables. The variance explained by this model is only 0.3106.
+
+vii. Plot the residuals and the distribution of the residuals. Plot the qqnorm and qqline of the residuals.
+```{r}
+hist(m2$residuals)
+```
+```{r}
+plot(density(m2$residuals))
+```
+```{r}
+qqnorm(m2$residuals)
+qqline(m2$residuals, col = 2)
+```
+d. Repeat the above (c) for percentage_achievement as the response and all other predictors as
+above except targeted_productivity.
+
+```{r}
+#Regression equation and summary
+m3 = lm(percentage_achievement ~log(no_of_workers+1)+log(incentive+1)+
+          no_of_style_change+as.factor(quarter)+as.factor(department)+
+          as.factor(day)+as.factor(team), data=df)
+summary(m3)
+```
+Answer the following question:
+i. Which of the following variables significantly affect percentage_achievement and which direction? State the level of significance.
+as.factor(department)sewing (-44.9821) affects percentage_achievement in negative direction at significance level of 3.21e-10.
+
+ii. On the average how much does percentage_achievement change with one incremental style change.
+ -2.9608 - percentage_achievement decreases by 2.9608 with one incremental style change
+
+iii. What is the change in percentage_achievement for quarter 2, 3, 4 and 5 with respect to quarter 1. Which of these changes are statistically significant?
+percentage_achievement: 
+increases by 0.9373 for quarter 2 wrt quarter 1, 
+decreases by 2.7193 for quarter 3 wrt quarter 1, 
+decreases by 2.4098 for quarter 4 wrt quarter 1,
+increases by 12.3917 for quarter 5 wrt quarter 1.
+Change in log_productivity for quarter 5 wrt quarter 1 is statistically significant (p-value is 0.015216, which is less than 0.05 for 95% Confidence interval)
+
+iv. How does the percentage_achievement of sewing department compare with the finishing department?
+The percentage_achievement of sewing department is -44.9821.
+
+v. Write down the regression equation for the following cases:
+1. Sewing department for a Sunday of quarter 4 for team 10.
+$$
+E[percentage_achievement]= -38.5329 + 19.6702\times log(noofworkers +1)+3.3779 \\ \times log(incentive + 1) -2.9608 \times noofstylechange \\-44.9821 \times sewing-0.9604 \times Sunday-2.4098 \times Quarter4-10.9563\times team10
+$$
+2. Finishing department for a Wednesday of quarter 1 for team 4.
+$$
+E[percentage_achievement]= -38.5329 + 19.6702\times log(noofworkers +1)+3.3779 \\ \times log(incentive + 1) -2.9608 \times noofstylechange+ \\ 1.1366 \times Wednesday-0.1150\times team4
+$$
+3. Finishing department for a Monday of quarter 2 for team 8.
+$$
+E[percentage_achievement]= -38.5329 + 19.6702\times log(noofworkers +1)+3.3779 \\ \times log(incentive + 1)-2.9608 \times noofstylechange+ \\ -8.1021\times team8+0.9373\times Quarter2 
+$$
+vi. Plot the actual log of productivity values versus the predicted log of productivity values. Do you think the model is a good fit? How much variance of the response is explained by the model?
+```{r}
+pred = predict(m3, newdata = df)
+plot(df$percentage_achievement, pred, xlab="actual percentage_achievement",
+     ylab="predicted percentage_achievement",
+     main = "Observed versus Predicted Values")
+```
+The model is not a perfect fit. This might be because of not considering other variables. The variance explained by this model is only 0.082.
+
+vii. Plot the residuals and the distribution of the residuals. Plot the qqnorm and qqline of the residuals.
+```{r}
+hist(m3$residuals)
+```
+
+```{r}
+plot(density(m3$residuals))
+```
+
+```{r}
+qqnorm(m3$residuals)
+qqline(m3$residuals, col = 2)
+```
+e. Conduct an ANOVA analysis for question (c) and explain how much (and statistical significance) variance is explained by each variables? Which variable explains the maximum variance?
+
+```{r}
+anova(m2)
+```
+The significance explained by log(incentive + 1)- < 2.2e-16, log(targeted_productivity)- < 2.2e-16, no_of_style_change-0.0002012, as.factor(quarter)-0.0059300, as.factor(department)- < 2.2e-16, as.factor(team)-5.418e-06 is less than 0.05 - statistically significant at 95% C.I. log(no_of_workers + 1)- 0.9061712 and as.factor(day)- 0.6794706 which is >0.05 and not statistically significant.
+We can observe Sum Sq values to see the variance explained by each variable. log(targeted_productivity) explains the highest variance followed by log(incentive + 1). log(no_of_workers + 1) explains least variance - 0.001.
+
+# Managerial Insights
+
+Summarize your findings from the above analysis. What can managers of garment manufacturing units learn from your analysis of the data? If a manager is interested in improving the productivity of a garment manufacturing unit, what actions would you suggest (reasonable actions, you cannot ask to stop functioning of a division) to adopt?
+
+Findings from the above analysis are:
+1. The worker's productivity increase towards the end of the month - quarter5
+2. Finishing department workers have higher productivity than sewing department
+3. no_of_style_change 0 has highest productivity
+4. productivity has slightly increased with increase in incentives
+5. increase in number of workers in a team hasn't increased percentage achievement
+6. Incentive is a better predictor compared to number of workers in a team
+7. targeted productivity explains the highest variance in the model
+8. the model with log_productivity as the response variable is a better model than percentage_achievement model
+
+From this analysis, managers can learn the important factors contributing to the productivity of their units.
+They can also analyze the days and conditions of low productivity and take measures to improve them to increase the overall productivity.
+
+Actions to improve productivity:
+1. Optimize the workflow and reduce unnecessary steps in the manufacturing
+2. Try to maintain good productivity throughout the month and not just at the end by keeping weekly production goals.
+3. Monitor the performance of the production unit to identify areas of improvement.
+4. Utilize Lean Manufacturing principles to reduce waste and streamline production processes. This will help the unit to increase productivity and reduce costs.
+5. Improve communication between employees and managers to ensure that everyone is on the same page and working towards the same goals.
+6. Regularly train employees on new technologies and processes to keep them up to date with the latest innovations.
+7. Invest in automated equipment and machines to boost production speed and accuracy.
+8. Incentives is a motivating factor for increasing worker's productivity.
+9. Identify the problems and bottlenecks in each department and improve the process. (here, in sewing department)
+10. Utilize data-driven decision-making to identify bottlenecks and make necessary changes. 
